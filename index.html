@@ -309,14 +309,34 @@ function abrirLista() {
   carregarLista();
 }
 
+// Quem está entrando (e-mail e perfil gravados no acesso), para explicar recusas
+async function descreverConta() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const s = data && data.session;
+    if (!s) return "";
+    const corpo = JSON.parse(atob(s.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return ` (conta ${corpo.email || "?"}, perfil ${((corpo.app_metadata || {}).perfil) || "nenhum"})`;
+  } catch (e) {
+    return "";
+  }
+}
+
 async function carregarLista() {
   $("dia-texto").textContent = nomeDoDia(dia);
   caixaErro("lista-erro", "");
 
-  const { data, error } = await sb.rpc("motorista_entregas", { p_dia: dia });
+  let { data, error } = await sb.rpc("motorista_entregas", { p_dia: dia });
+
+  // acesso criado antes de o perfil existir: renova (traz o perfil novo) e tenta mais uma vez
+  if (error && /SEM_PERMISSAO/.test(String(error.message))) {
+    await sb.auth.refreshSession();
+    ({ data, error } = await sb.rpc("motorista_entregas", { p_dia: dia }));
+  }
 
   if (error) {
-    caixaErro("lista-erro", textoErro(error));
+    const recusa = /SEM_PERMISSAO/.test(String(error.message));
+    caixaErro("lista-erro", textoErro(error) + (recusa ? (await descreverConta()) + " Toque em Sair e entre de novo." : ""));
     return;
   }
 
