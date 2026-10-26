@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<title>Massa Fresca - Entregas</title>
+<style>
+  :root {
+    --verde: #1b5e20; --verde-claro: #e8f5e9; --vermelho: #b71c1c; --vermelho-claro: #ffebee;
+    --ambar: #8d6e00; --ambar-claro: #fff8e1; --cinza: #546e7a; --borda: #cfd8dc;
+    --fundo: #f4f6f4; --texto: #1c2b1f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--fundo); color: var(--texto);
+    font: 17px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior: contain; }
+  .tela { display: none; min-height: 100vh; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .tela.ativa { display: block; }
+  .topo { position: sticky; top: 0; z-index: 5; background: var(--verde); color: #fff;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px; display: flex; align-items: center; gap: 10px; }
+  .topo h1 { font-size: 19px; margin: 0; flex: 1; font-weight: 700; }
+  .topo button { background: rgba(255,255,255,.18); color: #fff; border: 0; border-radius: 10px;
+    padding: 9px 14px; font-size: 15px; }
+  .conteudo { padding: 14px 16px; max-width: 640px; margin: 0 auto; }
+  .card { background: #fff; border: 1px solid var(--borda); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .card.feito { background: #f1f4f1; opacity: .82; }
+  .linha { display: flex; align-items: center; gap: 8px; }
+  .linha.entre { justify-content: space-between; }
+  .nome { font-weight: 700; font-size: 18px; }
+  .peq { font-size: 14px; color: var(--cinza); }
+  .chip { display: inline-block; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+  .chip.ABERTO, .chip.SEPARADO { background: var(--ambar-claro); color: var(--ambar); }
+  .chip.REAGENDADO { background: #e3f2fd; color: #0d47a1; }
+  .chip.ENTREGUE { background: var(--verde-claro); color: var(--verde); }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  input, textarea { width: 100%; font: inherit; padding: 13px; border: 1px solid var(--borda);
+    border-radius: 12px; background: #fff; color: var(--texto); }
+  textarea { min-height: 80px; resize: vertical; }
+  .btn { display: block; width: 100%; min-height: 54px; border: 0; border-radius: 14px; font: inherit;
+    font-weight: 700; font-size: 18px; padding: 12px; color: #fff; background: var(--verde); margin-top: 12px; }
+  .btn.sec { background: #fff; color: var(--verde); border: 2px solid var(--verde); }
+  .btn.vermelho { background: var(--vermelho); }
+  .btn.cinza { background: var(--cinza); }
+  .btn:disabled { opacity: .55; }
+  .aviso { border-radius: 12px; padding: 12px 14px; margin: 10px 0; font-size: 16px; }
+  .aviso.troca { background: var(--ambar-claro); color: var(--ambar); border: 1px solid #ffe082; }
+  .aviso.erro { background: var(--vermelho-claro); color: var(--vermelho); border: 1px solid #ffcdd2; }
+  .aviso.ok { background: var(--verde-claro); color: var(--verde); border: 1px solid #c8e6c9; }
+  .itens { margin: 8px 0 0; padding: 0; list-style: none; }
+  .itens li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #eceff1; }
+  .itens li:last-child { border-bottom: 0; }
+  .itens b { white-space: nowrap; }
+  .dia { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .dia button { border: 1px solid var(--borda); background: #fff; border-radius: 12px; width: 48px; height: 48px; font-size: 20px; }
+  .dia .atual { flex: 1; text-align: center; font-weight: 700; }
+  .resumo { display: flex; gap: 8px; margin-bottom: 12px; }
+  .resumo div { flex: 1; background: #fff; border: 1px solid var(--borda); border-radius: 12px; padding: 8px 10px; text-align: center; }
+  .resumo b { display: block; font-size: 22px; }
+  .pad { border: 2px dashed var(--cinza); border-radius: 14px; background: #fff; position: relative; }
+  .pad canvas { display: block; width: 100%; height: 200px; touch-action: none; border-radius: 12px; }
+  .pad .dica { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #b0bec5; font-size: 18px; pointer-events: none; }
+  .duas { display: flex; gap: 10px; } .duas > div { flex: 1; }
+  .login { max-width: 420px; margin: 0 auto; padding: 32px 20px; text-align: center; }
+  .login img { width: 240px; max-width: 70%; margin-bottom: 18px; }
+  .login label { text-align: left; }
+  #toast { position: fixed; left: 16px; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 20;
+    background: #263238; color: #fff; padding: 14px 16px; border-radius: 12px; display: none; text-align: center; }
+  a.link { color: var(--verde); font-weight: 600; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="tela-login" class="tela">
+  <div class="login">
+    <img src="logo.png" alt="Massa Fresca">
+    <h2 style="margin:0 0 4px">Entregas</h2>
+    <div class="peq">Entre uma vez; o celular fica conectado.</div>
+    <form id="form-login" autocomplete="on">
+      <label for="login-email">E-mail da conta do motorista</label>
+      <input id="login-email" type="email" inputmode="email" autocomplete="username" required>
+      <label for="login-senha">Senha</label>
+      <input id="login-senha" type="password" autocomplete="current-password" required>
+      <div id="login-erro" class="aviso erro" style="display:none"></div>
+      <button class="btn" id="btn-login" type="submit">Entrar</button>
+    </form>
+    <p class="peq" style="margin-top:20px">Dica: no menu ⋮ do Chrome, toque em “Instalar app” para ter o ícone na tela inicial.</p>
+  </div>
+</section>
+
+<!-- LISTA DO DIA -->
+<section id="tela-lista" class="tela">
+  <header class="topo"><h1>Entregas</h1><button id="btn-atualizar" type="button">Atualizar</button><button id="btn-sair" type="button">Sair</button></header>
+  <div class="conteudo">
+    <div class="dia">
+      <button id="dia-ant" type="button" aria-label="Dia anterior">◀</button>
+      <div class="atual" id="dia-texto"></div>
+      <button id="dia-prox" type="button" aria-label="Próximo dia">▶</button>
+    </div>
+    <div class="resumo">
+      <div><b id="res-pend">0</b><span class="peq">pendentes</span></div>
+      <div><b id="res-ent">0</b><span class="peq">entregues</span></div>
+    </div>
+    <div id="lista-erro" class="aviso erro" style="display:none"></div>
+    <div id="lista"></div>
+  </div>
+</section>
+
+<!-- DETALHE -->
+<section id="tela-detalhe" class="tela">
+  <header class="topo"><button id="det-voltar" type="button">◀ Voltar</button><h1 id="det-titulo"></h1></header>
+  <div class="conteudo" id="det-corpo"></div>
+</section>
+
+<!-- ENTREGAR -->
+<section id="tela-entregar" class="tela">
+  <header class="topo"><button id="ent-voltar" type="button">◀ Voltar</button><h1>Registrar entrega</h1></header>
+  <div class="conteudo">
+    <div class="nome" id="ent-cliente"></div>
+    <label for="ent-nome">Nome de quem recebeu *</label>
+    <input id="ent-nome" type="text" autocomplete="off" autocapitalize="words">
+    <label for="ent-doc">RG ou documento (opcional)</label>
+    <input id="ent-doc" type="text" autocomplete="off">
+    <div class="duas">
+      <div><label for="ent-chegada">Chegada</label><input id="ent-chegada" type="time"></div>
+      <div><label for="ent-saida">Saída</label><input id="ent-saida" type="time"></div>
+    </div>
+    <label for="ent-obs">Observação (opcional)</label>
+    <textarea id="ent-obs"></textarea>
+    <label>Assinatura de quem recebeu *</label>
+    <div class="pad"><canvas id="pad"></canvas><div class="dica" id="pad-dica">Assine aqui com o dedo</div></div>
+    <button class="btn sec" id="pad-limpar" type="button">Limpar assinatura</button>
+    <div id="ent-erro" class="aviso erro" style="display:none"></div>
+    <button class="btn" id="ent-confirmar" type="button">✅ CONFIRMAR ENTREGA</button>
+  </div>
+</section>
+
+<!-- REAGENDAR -->
+<section id="tela-reagendar" class="tela">
+  <header class="topo"><button id="rea-voltar" type="button">◀ Voltar</button><h1>Reagendar</h1></header>
+  <div class="conteudo">
+    <div class="nome" id="rea-cliente"></div>
+    <label for="rea-data">Nova data de entrega *</label>
+    <input id="rea-data" type="date">
+    <label for="rea-motivo">Motivo *</label>
+    <textarea id="rea-motivo" placeholder="Ex.: cliente fechado, ninguém para receber..."></textarea>
+    <div id="rea-erro" class="aviso erro" style="display:none"></div>
+    <button class="btn vermelho" id="rea-confirmar" type="button">↩ CONFIRMAR REAGENDAMENTO</button>
+  </div>
+</section>
+
+<div id="toast" role="status"></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+"use strict";
+
+/* ===================================================================
+   App do motorista - Massa Fresca
+   Só conversa com o banco por 3 funções: motorista_entregas,
+   motorista_entregar e motorista_reagendar.
+   =================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const PENDENTES = ["ABERTO", "SEPARADO", "REAGENDADO"];
+
+const MOTIVOS = {
+  RECEBEDOR: "Digite o nome de quem recebeu.",
+  ASSINATURA: "A assinatura não foi aceita. Limpe e assine de novo.",
+  HORA: "Hora inválida. Confira chegada e saída.",
+  NAO_ENCONTRADO: "Pedido não encontrado. Atualize a lista.",
+  STATUS: "Este pedido já foi entregue ou mudou de situação. Atualize a lista.",
+  MOTIVO: "Digite o motivo do reagendamento.",
+  DATA: "A nova data não pode ser antes de hoje.",
+};
+
+let sb = null;
+let dia = hojeSP();
+let entregas = [];
+let atual = null;
+let pad = null;
+let enviando = false;
+
+/* ------------------------------------------------------------- datas e horas */
+
+function hojeSP() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+function somarDias(iso, n) {
+  const [a, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+function dataBR(iso) {
+  const [a, m, d] = String(iso).slice(0, 10).split("-");
+  return `${d}/${m}/${a}`;
+}
+
+function nomeDoDia(iso) {
+  const [a, m, d] = iso.split("-").map(Number);
+  const semana = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"][new Date(Date.UTC(a, m - 1, d)).getUTCDay()];
+  const hoje = hojeSP();
+  const rotulo = iso === hoje ? "Hoje" : iso === somarDias(hoje, 1) ? "Amanhã" : iso === somarDias(hoje, -1) ? "Ontem" : semana;
+  return `${rotulo} · ${dataBR(iso)}`;
+}
+
+function horaAgora() {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false })
+    .format(new Date()).replace(/^24:/, "00:");
+}
+
+/* --------------------------------------------------------------- utilidades */
+
+function el(tag, props, ...filhos) {
+  const e = document.createElement(tag);
+  Object.entries(props || {}).forEach(([k, v]) => {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  });
+  filhos.flat().forEach((f) => { if (f !== null && f !== undefined && f !== false) e.append(f); });
+  return e;
+}
+
+function mostrar(nome) {
+  document.querySelectorAll(".tela").forEach((t) => t.classList.toggle("ativa", t.id === "tela-" + nome));
+  window.scrollTo(0, 0);
+}
+
+let tempoToast = null;
+function toast(texto) {
+  const t = $("toast");
+  t.textContent = texto;
+  t.style.display = "block";
+  clearTimeout(tempoToast);
+  tempoToast = setTimeout(() => (t.style.display = "none"), 3200);
+}
+
+function caixaErro(id, texto) {
+  const c = $(id);
+  c.textContent = texto || "";
+  c.style.display = texto ? "block" : "none";
+}
+
+function textoErro(erro) {
+  const msg = String((erro && erro.message) || erro || "");
+  if (/SEM_PERMISSAO/.test(msg)) return "Esta conta não tem permissão de motorista.";
+  if (/Failed to fetch|NetworkError|Load failed|network/i.test(msg)) return "Sem internet. Confira o sinal e tente de novo.";
+  if (/Invalid login credentials/i.test(msg)) return "E-mail ou senha incorretos.";
+  if (/JWT|expired|not authenticated/i.test(msg)) return "A conexão venceu. Saia e entre de novo.";
+  return "Não foi possível concluir. " + msg;
+}
+
+/* ------------------------------------------------------------------- login */
+
+async function iniciar() {
+  if (!window.supabase || !window.CONFIG || /COLE-AQUI/.test(window.CONFIG.SUPABASE_KEY || "")) {
+    mostrar("login");
+    caixaErro("login-erro", "App sem configuração: preencha a chave no arquivo config.js.");
+    return;
+  }
+
+  sb = window.supabase.createClient(window.CONFIG.SUPABASE_URL, window.CONFIG.SUPABASE_KEY,
+    { auth: { persistSession: true, autoRefreshToken: true } });
+
+  const { data } = await sb.auth.getSession();
+
+  if (data && data.session) {
+    abrirLista();
+  } else {
+    mostrar("login");
+  }
+}
+
+$("form-login").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  if (!sb) return;
+  caixaErro("login-erro", "");
+  $("btn-login").disabled = true;
+
+  const { error } = await sb.auth.signInWithPassword({
+    email: $("login-email").value.trim(), password: $("login-senha").value });
+
+  $("btn-login").disabled = false;
+
+  if (error) { caixaErro("login-erro", textoErro(error)); return; }
+
+  $("login-senha").value = "";
+  abrirLista();
+});
+
+$("btn-sair").addEventListener("click", async () => {
+  if (!confirm("Sair da conta neste celular?")) return;
+  await sb.auth.signOut();
+  mostrar("login");
+});
+
+/* ------------------------------------------------------------------- lista */
+
+function abrirLista() {
+  mostrar("lista");
+  carregarLista();
+}
+
+async function carregarLista() {
+  $("dia-texto").textContent = nomeDoDia(dia);
+  caixaErro("lista-erro", "");
+
+  const { data, error } = await sb.rpc("motorista_entregas", { p_dia: dia });
+
+  if (error) {
+    caixaErro("lista-erro", textoErro(error));
+    return;
+  }
+
+  entregas = (data || []).slice().sort((a, b) => {
+    const pa = PENDENTES.includes(a.status) ? 0 : 1, pb = PENDENTES.includes(b.status) ? 0 : 1;
+    return pa - pb || (a.numero || 0) - (b.numero || 0);
+  });
+
+  desenharLista();
+}
+
+function desenharLista() {
+  const pend = entregas.filter((e) => PENDENTES.includes(e.status)).length;
+  $("res-pend").textContent = pend;
+  $("res-ent").textContent = entregas.length - pend;
+
+  const box = $("lista");
+  box.replaceChildren();
+
+  if (!entregas.length) {
+    box.append(el("div", { class: "card peq" }, "Nenhuma entrega para este dia."));
+    return;
+  }
+
+  entregas.forEach((e) => {
+    const feito = !PENDENTES.includes(e.status);
+    box.append(el("div", { class: "card" + (feito ? " feito" : ""), role: "button", tabindex: "0",
+      onclick: () => abrirDetalhe(e.id) },
+      el("div", { class: "linha entre" },
+        el("div", { class: "nome" }, e.cliente || "(sem cliente)"),
+        el("span", { class: "chip " + e.status }, e.status === "ENTREGUE" ? "✔ ENTREGUE" : e.status)),
+      el("div", { class: "peq" }, `Pedido ${e.numero ?? ""}` + (e.caixas ? ` · ${e.caixas} caixa(s)` : "")),
+      e.endereco ? el("div", {}, e.endereco) : null,
+      e.trocas && e.trocas.length ? el("div", { class: "peq", style: "color:#8d6e00;font-weight:700" }, "⚠ Tem troca neste pedido") : null));
+  });
+}
+
+$("dia-ant").addEventListener("click", () => { dia = somarDias(dia, -1); carregarLista(); });
+$("dia-prox").addEventListener("click", () => { dia = somarDias(dia, 1); carregarLista(); });
+$("btn-atualizar").addEventListener("click", () => { carregarLista(); toast("Lista atualizada"); });
+
+/* ----------------------------------------------------------------- detalhe */
+
+function abrirDetalhe(id) {
+  atual = entregas.find((e) => e.id === id);
+  if (!atual) return;
+
+  const e = atual;
+  const pendente = PENDENTES.includes(e.status);
+  $("det-titulo").textContent = `Pedido ${e.numero ?? ""}`;
+
+  const corpo = $("det-corpo");
+  corpo.replaceChildren(...[
+    el("div", { class: "card" },
+      el("div", { class: "linha entre" },
+        el("div", { class: "nome" }, e.cliente || "(sem cliente)"),
+        el("span", { class: "chip " + e.status }, e.status)),
+      e.endereco ? el("div", { style: "margin-top:8px" }, e.endereco) : el("div", { class: "peq", style: "margin-top:8px" }, "Endereço não cadastrado"),
+      el("div", { class: "linha", style: "margin-top:10px;gap:18px;flex-wrap:wrap" },
+        e.endereco ? el("a", { class: "link", target: "_blank", rel: "noopener",
+          href: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(e.endereco) }, "📍 Abrir no mapa") : null,
+        e.telefone ? el("a", { class: "link", href: "tel:" + String(e.telefone).replace(/[^0-9+]/g, "") }, "📞 " + e.telefone) : null),
+      el("div", { class: "peq", style: "margin-top:10px" },
+        [e.nf ? `NF ${e.nf}` : null, e.caixas ? `${e.caixas} caixa(s)` : null, e.motorista ? `Motorista: ${e.motorista}` : null].filter(Boolean).join(" · "))),
+
+    e.observacao ? el("div", { class: "aviso troca" }, el("b", {}, "Observação: "), e.observacao) : null,
+
+    e.trocas && e.trocas.length ? el("div", { class: "aviso troca" },
+      el("b", {}, "⚠ Troca neste pedido"),
+      el("ul", { class: "itens" }, e.trocas.map((t) => el("li", {}, el("span", {}, `${t.produto || ""}${t.motivo ? " — " + t.motivo : ""}`), el("b", {}, `${t.quantidade ?? ""} un.`))))) : null,
+
+    el("div", { class: "card" },
+      el("b", {}, "Itens do pedido"),
+      el("ul", { class: "itens" }, (e.itens || []).length
+        ? e.itens.map((i) => el("li", {}, el("span", {}, i.produto || ""), el("b", {}, `${i.quantidade}`)))
+        : [el("li", { class: "peq" }, "Sem itens")])),
+
+    !pendente && e.status === "ENTREGUE" ? el("div", { class: "aviso ok" },
+      `Entregue${e.recebedor ? " — recebido por " + e.recebedor : ""}${e.tem_assinatura ? " ✔ assinatura registrada" : ""}`) : null,
+
+    pendente ? el("button", { class: "btn", type: "button", onclick: abrirEntregar }, "✅ ENTREGUE") : null,
+    pendente ? el("button", { class: "btn sec", type: "button", style: "color:#b71c1c;border-color:#b71c1c", onclick: abrirReagendar }, "↩ REAGENDAR / NÃO ENTREGUE") : null
+  ].filter(Boolean));
+
+  mostrar("detalhe");
+}
+
+$("det-voltar").addEventListener("click", () => mostrar("lista"));
+
+/* ------------------------------------------------------------- assinatura */
+
+class Assinatura {
+  constructor(canvas, dica) {
+    this.c = canvas; this.dica = dica; this.ctx = canvas.getContext("2d");
+    this.tracos = 0; this.desenhando = false;
+    const ini = (ev) => { ev.preventDefault(); this.desenhando = true; const p = this.ponto(ev);
+      this.ctx.beginPath(); this.ctx.moveTo(p.x, p.y); this.ctx.lineTo(p.x + 0.01, p.y + 0.01); this.ctx.stroke();
+      this.tracos++; this.dica.style.display = "none"; };
+    const mov = (ev) => { if (!this.desenhando) return; ev.preventDefault(); const p = this.ponto(ev);
+      this.ctx.lineTo(p.x, p.y); this.ctx.stroke(); };
+    const fim = () => { this.desenhando = false; };
+    canvas.addEventListener("pointerdown", (ev) => { canvas.setPointerCapture && canvas.setPointerCapture(ev.pointerId); ini(ev); });
+    canvas.addEventListener("pointermove", mov);
+    canvas.addEventListener("pointerup", fim);
+    canvas.addEventListener("pointercancel", fim);
+    canvas.addEventListener("pointerleave", fim);
+  }
+  preparar() {
+    const r = this.c.getBoundingClientRect(), f = window.devicePixelRatio || 1;
+    this.c.width = Math.max(1, Math.round(r.width * f));
+    this.c.height = Math.max(1, Math.round(r.height * f));
+    this.ctx.setTransform(f, 0, 0, f, 0, 0);
+    this.ctx.lineWidth = 3; this.ctx.lineCap = "round"; this.ctx.lineJoin = "round"; this.ctx.strokeStyle = "#111";
+    this.limpar();
+  }
+  ponto(ev) { const r = this.c.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+  limpar() {
+    this.ctx.save(); this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, this.c.width, this.c.height); this.ctx.restore();
+    this.tracos = 0; this.dica.style.display = "flex";
+  }
+  vazia() { return this.tracos === 0; }
+  // PNG com fundo branco e no máximo 600 px de largura (arquivo pequeno)
+  png() {
+    const largura = Math.min(600, this.c.width), altura = Math.round(this.c.height * largura / this.c.width);
+    const t = document.createElement("canvas"); t.width = largura; t.height = altura;
+    const x = t.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, largura, altura);
+    x.drawImage(this.c, 0, 0, largura, altura);
+    return t.toDataURL("image/png");
+  }
+}
+
+/* ----------------------------------------------------------------- entregar */
+
+function abrirEntregar() {
+  caixaErro("ent-erro", "");
+  $("ent-cliente").textContent = atual.cliente || "";
+  $("ent-nome").value = "";
+  $("ent-doc").value = "";
+  $("ent-obs").value = "";
+  $("ent-chegada").value = horaAgora();
+  $("ent-saida").value = "";
+  mostrar("entregar");
+
+  if (!pad) pad = new Assinatura($("pad"), $("pad-dica"));
+  pad.preparar();
+}
+
+$("pad-limpar").addEventListener("click", () => pad.limpar());
+$("ent-voltar").addEventListener("click", () => mostrar("detalhe"));
+
+$("ent-confirmar").addEventListener("click", async () => {
+  if (enviando) return;
+  caixaErro("ent-erro", "");
+
+  const nome = $("ent-nome").value.trim();
+  if (!nome) { caixaErro("ent-erro", MOTIVOS.RECEBEDOR); $("ent-nome").focus(); return; }
+  if (pad.vazia()) { caixaErro("ent-erro", "Peça para quem recebeu assinar no quadro."); return; }
+
+  enviando = true;
+  $("ent-confirmar").disabled = true;
+
+  const { data, error } = await sb.rpc("motorista_entregar", {
+    p_pedido_id: atual.id,
+    p_recebedor: nome,
+    p_documento: $("ent-doc").value.trim(),
+    p_chegada: $("ent-chegada").value || "",
+    p_saida: $("ent-saida").value || horaAgora(),
+    p_obs: $("ent-obs").value.trim(),
+    p_assinatura: pad.png(),
+  });
+
+  enviando = false;
+  $("ent-confirmar").disabled = false;
+
+  if (error) { caixaErro("ent-erro", textoErro(error)); return; }
+  if (!data || !data.ok) { caixaErro("ent-erro", MOTIVOS[data && data.motivo] || "Não foi possível registrar."); return; }
+
+  toast("Entrega registrada ✔");
+  abrirLista();
+});
+
+/* ---------------------------------------------------------------- reagendar */
+
+function abrirReagendar() {
+  caixaErro("rea-erro", "");
+  $("rea-cliente").textContent = atual.cliente || "";
+  const amanha = somarDias(hojeSP(), 1);
+  $("rea-data").min = hojeSP();
+  $("rea-data").value = amanha;
+  $("rea-motivo").value = "";
+  mostrar("reagendar");
+}
+
+$("rea-voltar").addEventListener("click", () => mostrar("detalhe"));
+
+$("rea-confirmar").addEventListener("click", async () => {
+  if (enviando) return;
+  caixaErro("rea-erro", "");
+
+  const nova = $("rea-data").value, motivo = $("rea-motivo").value.trim();
+  if (!nova) { caixaErro("rea-erro", "Escolha a nova data."); return; }
+  if (!motivo) { caixaErro("rea-erro", MOTIVOS.MOTIVO); $("rea-motivo").focus(); return; }
+
+  enviando = true;
+  $("rea-confirmar").disabled = true;
+
+  const { data, error } = await sb.rpc("motorista_reagendar",
+    { p_pedido_id: atual.id, p_nova_data: nova, p_motivo: motivo });
+
+  enviando = false;
+  $("rea-confirmar").disabled = false;
+
+  if (error) { caixaErro("rea-erro", textoErro(error)); return; }
+  if (!data || !data.ok) { caixaErro("rea-erro", MOTIVOS[data && data.motivo] || "Não foi possível reagendar."); return; }
+
+  toast(`Reagendado para ${dataBR(nova)}`);
+  abrirLista();
+});
+
+/* --------------------------------------------------------------------- início */
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+iniciar();
+</script>
+</body>
+</html>
